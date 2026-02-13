@@ -5,8 +5,8 @@ const app = express();
 app.use(express.json());
 
 const VERIFY_TOKEN = "token123alejandro";
-const ACCESS_TOKEN = "YOUR_ACCESS_TOKEN";
-const PHONE_NUMBER_ID = "YOUR_PHONE_NUMBER_ID";
+const ACCESS_TOKEN = "EAAJXTB95mRMBQqJfKmZA7zFd7KBAM1nJWbYvMEpFs0H7ZAg3w9QlEhZC8SjwMo2cgWwbiXZCKJNRGZCmXbAvmMySPSee4SXgJ9JsC8lMnYHnJeSRAvPHjdwnGmv4SiLteIPDe4bDjnZCUqG02G79bkSncZC5oCEydFoZBILDYOvAf9pRxQjZA9d3ZAALZCUIxyOFFWeGGTd1fKnIHCJRyKEbJlX8FhucIRfzaRW4bGy8BJlKKXREy9mM0JeE10VITNpR2HRvcJ8l12uweZBTrRLl9QZDZD";
+const PHONE_NUMBER_ID = "1164823023377869";
 
 app.get('/', (req, res) => {
   const mode = req.query['hub.mode'];
