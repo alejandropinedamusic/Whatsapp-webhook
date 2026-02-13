@@ -1,13 +1,17 @@
 const express = require('express');
 const axios = require('axios');
-
 const app = express();
+
 app.use(express.json());
 
-const VERIFY_TOKEN = "token123alejandro";
-const ACCESS_TOKEN = "EAAJXTB95mRMBQqJfKmZA7zFd7KBAM1nJWbYvMEpFs0H7ZAg3w9QlEhZC8SjwMo2cgWwbiXZCKJNRGZCmXbAvmMySPSee4SXgJ9JsC8lMnYHnJeSRAvPHjdwnGmv4SiLteIPDe4bDjnZCUqG02G79bkSncZC5oCEydFoZBILDYOvAf9pRxQjZA9d3ZAALZCUIxyOFFWeGGTd1fKnIHCJRyKEbJlX8FhucIRfzaRW4bGy8BJlKKXREy9mM0JeE10VITNpR2HRvcJ8l12uweZBTrRLl9QZDZD";
-const PHONE_NUMBER_ID = "1164823023377869";
+// Variables de entorno (agrega estas en Render)
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;        // token de verificación webhook
+const AGENT_ID = process.env.AGENT_ID;                // tu Agent Builder ID
+const AGENT_KEY = process.env.AGENT_KEY;              // tu API Key de Agent Builder
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;  // WhatsApp API phone number ID
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;        // WhatsApp API access token
 
+// Verificación del webhook
 app.get('/', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -25,38 +29,46 @@ app.get('/', (req, res) => {
   }
 });
 
-app.post('/', async (req, res) => {
+// Función para enviar mensaje a Agent Builder
+async function enviarAMiAgente(mensaje, senderId) {
   try {
-    console.log('Mensaje recibido:', JSON.stringify(req.body, null, 2));
-
-    const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-
-    if (message) {
-      const from = message.from;
-
-      await axios.post(
-        `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`,
-        {
-          messaging_product: "whatsapp",
-          to: from,
-          text: { body: "Hola 👋 gracias por escribir a Armonía Fusión 🎶" }
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${ACCESS_TOKEN}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      console.log("Respuesta enviada correctamente");
-    }
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.error("Error:", error.response?.data || error.message);
-    res.sendStatus(500);
+    const response = await axios.post(
+      'https://api.agentbuilder.com/v1/message', // reemplaza con tu endpoint real
+      { agent_id: AGENT_ID, message: mensaje, sender_id: senderId },
+      { headers: { 'Authorization': `Bearer ${AGENT_KEY}` } }
+    );
+    return response.data.reply;
+  } catch (err) {
+    console.error('Error enviando a Agent Builder:', err);
+    return "Lo siento, hubo un error.";
   }
+}
+
+// Función para enviar respuesta a WhatsApp
+async function enviarAWhatsApp(to, mensaje) {
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v16.0/${PHONE_NUMBER_ID}/messages`,
+      { messaging_product: "whatsapp", to: to, text: { body: mensaje } },
+      { headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    console.error('Error enviando a WhatsApp:', err);
+  }
+}
+
+// Endpoint principal para recibir mensajes
+app.post('/', async (req, res) => {
+  const senderId = req.body.from || req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
+  const mensaje = req.body.text?.body || req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body;
+
+  if (senderId && mensaje) {
+    console.log('Mensaje recibido:', mensaje);
+    const respuesta = await enviarAMiAgente(mensaje, senderId);
+    await enviarAWhatsApp(senderId, respuesta);
+  }
+
+  res.sendStatus(200);
 });
 
 app.listen(process.env.PORT || 3000, () => console.log('Server running'));
