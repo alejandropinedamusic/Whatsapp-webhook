@@ -1,33 +1,31 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-
+const express = require('express');
 const app = express();
-app.use(bodyParser.json());
 
-const VERIFY_TOKEN = "123Alejandro"; // El mismo token que pusiste en Meta
+app.use(express.json());
 
-// Endpoint para verificar el token con Meta
-app.get("/webhook", (req, res) => {
-  let mode = req.query["hub.mode"];
-  let token = req.query["hub.verify_token"];
-  let challenge = req.query["hub.challenge"];
+const VERIFY_TOKEN = "token123alejandro";
+
+app.get('/', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
 
   if (mode && token) {
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
-      console.log("Webhook verificado!");
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      console.log('WEBHOOK_VERIFIED');
       res.status(200).send(challenge);
     } else {
       res.sendStatus(403);
     }
+  } else {
+    res.sendStatus(400);
   }
 });
 
-// Endpoint para recibir mensajes de WhatsApp
-app.post("/webhook", (req, res) => {
-  console.log("Mensaje recibido:", req.body);
+// Endpoint para recibir mensajes entrantes
+app.post('/', (req, res) => {
+  console.log('Mensaje recibido:', req.body);
   res.sendStatus(200);
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Servidor webhook corriendo...");
-});
+app.listen(process.env.PORT || 3000, () => console.log('Server running'));
