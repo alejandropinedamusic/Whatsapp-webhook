@@ -13,11 +13,13 @@ const ACCESS_TOKEN = process.env.ACCESS_TOKEN;        // WhatsApp API access tok
 
 // Verificación del webhook
 app.get('/', (req, res) => {
-  const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+  console.log("TOKEN FROM META:", req.query['hub.verify_token']);
+  console.log("TOKEN FROM RENDER:", process.env.VERIFY_TOKEN);
 
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
+  const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
     console.log('WEBHOOK_VERIFIED');
