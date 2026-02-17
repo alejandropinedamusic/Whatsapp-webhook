@@ -10,6 +10,7 @@ const AGENT_ID = process.env.AGENT_ID;                // tu Agent Builder ID
 const AGENT_KEY = process.env.AGENT_KEY;              // tu API Key de Agent Builder
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;  // WhatsApp API phone number ID
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;        // WhatsApp API access token
+const VERIFY_PISO_TOKEN = process.env.VERIFY_PISO_TOKEN; // Token de verificación del webhook
 
 // Verificación del webhook
 app.get('/', (req, res) => {
