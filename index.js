@@ -1,75 +1,73 @@
-const express = require('express');
-const axios = require('axios');
-const app = express();
+import express from "express";
+import fetch from "node-fetch";
 
+const app = express();
 app.use(express.json());
 
-// Variables de entorno (agrega estas en Render)
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;        // token de verificación webhook
-const AGENT_ID = process.env.AGENT_ID;                // tu Agent Builder ID
-const AGENT_KEY = process.env.AGENT_KEY;              // tu API Key de Agent Builder
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;  // WhatsApp API phone number ID
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN;        // WhatsApp API access token
-const VERIFY_PISO_TOKEN = process.env.VERIFY_PISO_TOKEN; // Token de verificación del webhook
+// Variables de entorno
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
-// Verificación del webhook
-app.get('/', (req, res) => {
-  console.log("TOKEN FROM META:", req.query['hub.verify_token']);
-  console.log("TOKEN FROM RENDER:", process.env.VERIFY_TOKEN);
+// Verificación del webhook (Meta)
+app.get("/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
 
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
-  const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-
-  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    console.log('WEBHOOK_VERIFIED');
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
+  if (mode && token) {
+    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+      console.log("Webhook verificado correctamente");
+      res.status(200).send(challenge);
+    } else {
+      res.sendStatus(403);
+    }
   }
 });
 
-// Función para enviar mensaje a Agent Builder
-async function enviarAMiAgente(mensaje, senderId) {
+// Recibir mensajes
+app.post("/webhook", async (req, res) => {
   try {
-    const response = await axios.post(
-      'https://api.agentbuilder.com/v1/message', // reemplaza con tu endpoint real
-      { agent_id: AGENT_ID, message: mensaje, sender_id: senderId },
-      { headers: { 'Authorization': `Bearer ${AGENT_KEY}` } }
-    );
-    return response.data.reply;
-  } catch (err) {
-    console.error('Error enviando a Agent Builder:', err);
-    return "Lo siento, hubo un error.";
+    const body = req.body;
+
+    if (
+      body.object &&
+      body.entry &&
+      body.entry[0].changes &&
+      body.entry[0].changes[0].value.messages
+    ) {
+      const message = body.entry[0].changes[0].value.messages[0];
+      const from = message.from;
+      const text = message.text?.body;
+
+      console.log("Mensaje recibido:", text);
+
+      // Respuesta automática simple
+      await fetch(
+        `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${ACCESS_TOKEN}`,
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to: from,
+            text: { body: "Recibí tu mensaje 👍" },
+          }),
+        }
+      );
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error:", error);
+    res.sendStatus(500);
   }
-}
-
-// Función para enviar respuesta a WhatsApp
-async function enviarAWhatsApp(to, mensaje) {
-  try {
-    await axios.post(
-      `https://graph.facebook.com/v16.0/${PHONE_NUMBER_ID}/messages`,
-      { messaging_product: "whatsapp", to: to, text: { body: mensaje } },
-      { headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' } }
-    );
-  } catch (err) {
-    console.error('Error enviando a WhatsApp:', err);
-  }
-}
-
-// Endpoint principal para recibir mensajes
-app.post('/', async (req, res) => {
-  const senderId = req.body.from || req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
-  const mensaje = req.body.text?.body || req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body;
-
-  if (senderId && mensaje) {
-    console.log('Mensaje recibido:', mensaje);
-    const respuesta = await enviarAMiAgente(mensaje, senderId);
-    await enviarAWhatsApp(senderId, respuesta);
-  }
-
-  res.sendStatus(200);
 });
 
-app.listen(process.env.PORT || 3000, () => console.log('Server running'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+});
