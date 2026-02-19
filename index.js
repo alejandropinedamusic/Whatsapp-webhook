@@ -1,7 +1,13 @@
 const express = require("express");
+const OpenAI = require("openai");
 
 const app = express();
 app.use(express.json());
+
+// Configuración de OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Variables de entorno
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
@@ -39,7 +45,23 @@ app.post("/webhook", async (req, res) => {
       const from = message.from;
       const text = message.text?.body;
 
+      if (!text) {
+        console.log("Mensaje sin texto recibido, ignorado.");
+        return res.sendStatus(200);
+      }
+
       console.log("Mensaje recibido:", text);
+
+      // Generar respuesta con OpenAI
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "Eres un asistente útil y amigable." },
+          { role: "user", content: text },
+        ],
+      });
+
+      const aiResponse = completion.choices[0].message.content;
 
       // Respuesta automática simple
       await fetch(
@@ -53,7 +75,7 @@ app.post("/webhook", async (req, res) => {
           body: JSON.stringify({
             messaging_product: "whatsapp",
             to: from,
-            text: { body: "Recibí tu mensaje 👍" },
+            text: { body: aiResponse },
           }),
         }
       );
