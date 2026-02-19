@@ -31,11 +31,12 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-// Recibir mensajes
+// Recibir mensajes y responder con OpenAI
 app.post("/webhook", async (req, res) => {
   try {
     const body = req.body;
 
+    // Revisar si hay mensajes
     if (
       body.object &&
       body.entry &&
@@ -64,30 +65,29 @@ app.post("/webhook", async (req, res) => {
 
       const aiResponse = completion.choices[0].message.content;
 
-      // **Log de depuración antes de enviar a WhatsApp**
-      const whatsappPayload = {
-        messaging_product: "whatsapp",
-        to: from,
-        text: { body: aiResponse },
-      };
-      const whatsappHeaders = {
-        Authorization: `Bearer ${ACCESS_TOKEN}`,
-        "Content-Type": "application/json",
-      };
-      console.log("Payload a enviar a WhatsApp:", whatsappPayload);
-      console.log("Headers:", whatsappHeaders);
-
-      // Enviar mensaje con Axios
+      // Enviar respuesta por WhatsApp API v24.0
       await axios.post(
-        `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
-        whatsappPayload,
-        { headers: whatsappHeaders }
+        `https://graph.facebook.com/v24.0/${PHONE_NUMBER_ID}/messages`,
+        {
+          messaging_product: "whatsapp",
+          to: from,
+          text: { body: aiResponse },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${ACCESS_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
+
+      console.log("Mensaje enviado correctamente:", aiResponse);
     }
 
+    // Siempre responder 200 OK a Meta
     res.sendStatus(200);
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error en webhook:", error.response?.data || error.message);
     res.sendStatus(500);
   }
 });
