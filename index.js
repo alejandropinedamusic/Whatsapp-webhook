@@ -64,27 +64,30 @@ app.post("/webhook", async (req, res) => {
 
       const aiResponse = completion.choices[0].message.content;
 
-      // Enviar respuesta a WhatsApp API
+      // **Log de depuración antes de enviar a WhatsApp**
+      const whatsappPayload = {
+        messaging_product: "whatsapp",
+        to: from,
+        text: { body: aiResponse },
+      };
+      const whatsappHeaders = {
+        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+      };
+      console.log("Payload a enviar a WhatsApp:", whatsappPayload);
+      console.log("Headers:", whatsappHeaders);
+
+      // Enviar mensaje con Axios
       await axios.post(
-        `https://graph.facebook.com/v24.0/${PHONE_NUMBER_ID}/messages`,
-        {
-          messaging_product: "whatsapp",
-          to: from,
-          text: { body: aiResponse },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${ACCESS_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-        }
+        `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
+        whatsappPayload,
+        { headers: whatsappHeaders }
       );
     }
 
-    // Siempre respondemos 200 OK a Meta para confirmar recepción
     res.sendStatus(200);
   } catch (error) {
-    console.error("Error en webhook:", error);
+    console.error("Error:", error);
     res.sendStatus(500);
   }
 });
