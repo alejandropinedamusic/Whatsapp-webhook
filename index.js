@@ -31,12 +31,11 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-// Recibir mensajes y responder con OpenAI
+// Recibir mensajes
 app.post("/webhook", async (req, res) => {
   try {
     const body = req.body;
 
-    // Revisar si hay mensajes
     if (
       body.object &&
       body.entry &&
@@ -65,7 +64,7 @@ app.post("/webhook", async (req, res) => {
 
       const aiResponse = completion.choices[0].message.content;
 
-      // Enviar respuesta por WhatsApp API v24.0
+      // Enviar respuesta a WhatsApp API
       await axios.post(
         `https://graph.facebook.com/v24.0/${PHONE_NUMBER_ID}/messages`,
         {
@@ -80,14 +79,12 @@ app.post("/webhook", async (req, res) => {
           },
         }
       );
-
-      console.log("Mensaje enviado correctamente:", aiResponse);
     }
 
-    // Siempre responder 200 OK a Meta
+    // Siempre respondemos 200 OK a Meta para confirmar recepción
     res.sendStatus(200);
   } catch (error) {
-    console.error("Error en webhook:", error.response?.data || error.message);
+    console.error("Error en webhook:", error);
     res.sendStatus(500);
   }
 });
